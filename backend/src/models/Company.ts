@@ -32,9 +32,10 @@ const companySchema = new Schema({
   timestamps: true
 });
 
-// Create compound indexes for common search patterns
-companySchema.index({ name: 'text', industry: 'text', country: 'text' });
-companySchema.index({ industry: 1, country: 1 });
-companySchema.index({ size: 1, industry: 1 });
+companySchema.index({ name: 1 });
+companySchema.index({ country: 1 });
+companySchema.index({ industry: 1 });
+companySchema.index({ size: 1 });
+
 
 export const Company = mongoose.model<ICompany>('Company', companySchema); 

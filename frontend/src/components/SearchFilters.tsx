@@ -25,6 +25,8 @@ interface SearchFiltersProps {
     companySize: string;
   }) => void;
   onSearch: () => void;
+  industries: string[];
+  countries: string[];
 }
 
 const companySizes = [
@@ -38,7 +40,7 @@ const companySizes = [
   '10001+'
 ];
 
-const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFilterChange, onSearch }) => {
+const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFilterChange, onSearch, industries, countries }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -73,22 +75,42 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({ filters, onFilterChange, 
           <Grid item xs={12} sm={6} md={3}>
             <TextField
               fullWidth
+              select
               label="Industry"
               value={filters.industry}
               onChange={handleChange('industry')}
               margin="normal"
               size={isMobile ? 'small' : 'medium'}
-            />
+            >
+              <MenuItem value="">
+                <em>Any</em>
+              </MenuItem>
+              {industries.map((industry) => (
+                <MenuItem key={industry} value={industry}>
+                  {industry}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <TextField
               fullWidth
+              select
               label="Country"
               value={filters.country}
               onChange={handleChange('country')}
               margin="normal"
               size={isMobile ? 'small' : 'medium'}
-            />
+            >
+              <MenuItem value="">
+                <em>Any</em>
+              </MenuItem>
+              {countries.map((country) => (
+                <MenuItem key={country} value={country}>
+                  {country}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <TextField

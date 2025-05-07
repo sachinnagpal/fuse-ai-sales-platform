@@ -30,6 +30,18 @@ const companyService = {
       params: { page, limit }
     });
     return response.data;
+  },
+
+  // Get unique industries
+  async getIndustries(): Promise<string[]> {
+    const response = await axios.get(`${API_URL}/companies/industries`);
+    return response.data;
+  },
+
+  // Get unique countries
+  async getCountries(): Promise<string[]> {
+    const response = await axios.get(`${API_URL}/companies/countries`);
+    return response.data;
   }
 };
 

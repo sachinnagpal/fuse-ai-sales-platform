@@ -15,17 +15,21 @@ export const companyController = {
       } = req.query;
 
       let query: any = {};
-      let textSearch = [];
-      if (name) textSearch.push(name);
-      if (industry) textSearch.push(industry);
-      if (country) textSearch.push(country);
+      
 
-      if (textSearch.length > 0) {
-        query["$text"] = { $search: textSearch.join(' '), $caseSensitive: false };
+      if (name) {
+        query.$text = { $search: name };
+      }
+      if (industry) {
+        query.industry = industry;
+      }
+      if (country) {
+        query.country = country;
       }
       if (size) {
         query.size = size;
       }
+      
 
       // Calculate skip value for pagination
       const skip = (Number(page) - 1) * Number(limit);
@@ -108,6 +112,26 @@ export const companyController = {
       });
     } catch (error) {
       res.status(500).json({ message: 'Error fetching saved companies', error });
+    }
+  },
+
+  // Get unique industries
+  async getUniqueIndustries(req: Request, res: Response) {
+    try {
+      const industries = await Company.distinct('industry');
+      res.json(industries);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching industries', error });
+    }
+  },
+
+  // Get unique countries
+  async getUniqueCountries(req: Request, res: Response) {
+    try {
+      const countries = await Company.distinct('country');
+      res.json(countries);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching countries', error });
     }
   }
 }; 

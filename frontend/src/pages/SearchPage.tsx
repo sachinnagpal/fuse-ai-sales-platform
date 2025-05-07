@@ -20,6 +20,13 @@ const SearchPage: React.FC = () => {
     page: 1,
     limit: 12,
   });
+  const [industries, setIndustries] = useState<string[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
+
+  useEffect(() => {
+    companyService.getIndustries().then(setIndustries);
+    companyService.getCountries().then(setCountries);
+  }, []);
 
   const searchCompanies = async () => {
     try {
@@ -74,6 +81,8 @@ const SearchPage: React.FC = () => {
         filters={filters}
         onFilterChange={handleFilterChange}
         onSearch={handleSearch}
+        industries={industries}
+        countries={countries}
       />
 
       {loading ? (
