@@ -58,7 +58,7 @@ export const CompanyDetail: React.FC<CompanyDetailProps> = ({ company, onUpdate 
           <div className="bg-gray-50 rounded-lg p-4 md:col-span-2">
             <h3 className="text-sm font-medium text-gray-500">Website</h3>
             <a 
-              href={company.website} 
+              href={company.website ? (company.website.startsWith('http') ? company.website : `https://${company.website}`) : '#'} 
               target="_blank" 
               rel="noopener noreferrer"
               className="mt-1 text-indigo-600 hover:text-indigo-500 block"
@@ -69,7 +69,7 @@ export const CompanyDetail: React.FC<CompanyDetailProps> = ({ company, onUpdate 
           <div className="bg-gray-50 rounded-lg p-4 md:col-span-2">
             <h3 className="text-sm font-medium text-gray-500">LinkedIn</h3>
             <a 
-              href={company.linkedin_url} 
+              href={company.linkedin_url ? (company.linkedin_url.startsWith('http') ? company.linkedin_url : `https://${company.linkedin_url}`) : '#'} 
               target="_blank" 
               rel="noopener noreferrer"
               className="mt-1 text-indigo-600 hover:text-indigo-500 block"

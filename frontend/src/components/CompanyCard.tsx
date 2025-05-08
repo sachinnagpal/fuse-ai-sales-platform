@@ -44,7 +44,7 @@ function CompanyCard({ company, onSave }: CompanyCardProps) {
             <div className="flex items-center space-x-2">
               {company.website && (
                 <a
-                  href={company.website}
+                  href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-50"
@@ -58,7 +58,7 @@ function CompanyCard({ company, onSave }: CompanyCardProps) {
               )}
               {company.linkedin_url && (
                 <a
-                  href={company.linkedin_url}
+                  href={company.linkedin_url.startsWith('http') ? company.linkedin_url : `https://${company.linkedin_url}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-50"
