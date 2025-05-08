@@ -1,15 +1,18 @@
 export interface Company {
   _id: string;
   name: string;
-  industry: string;
   size: string;
-  revenue: string;
-  location: string;
-  yearFounded: number;
-  description: string;
   website?: string;
-  linkedin?: string;
-  isSaved?: boolean;
+  founded: number;
+  locality: string;
+  region: string;
+  country: string;
+  industry: string;
+  linkedin_url?: string;
+  description?: string;
+  isSaved: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CompanySearchResponse {
@@ -22,10 +25,11 @@ export interface CompanySearchResponse {
 export interface CompanySearchFilters {
   page?: number;
   limit?: number;
-  name?: string;
   industry?: string;
   size?: string;
-  revenue?: string;
-  location?: string;
-  yearFounded?: [number, number];
+  locality?: string;
+  region?: string;
+  country?: string;
+  yearFoundStart?: number;
+  yearFoundEnd?: number;
 } 

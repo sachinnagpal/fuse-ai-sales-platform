@@ -2,40 +2,38 @@ import React, { useState, useEffect } from 'react';
 import CompanyCard from '../components/CompanyCard';
 import SearchFilters from '../components/SearchFilters';
 import companyService from '../services/companyService';
-import type { Company, CompanySearchFilters } from '../types/company';
+import type { Company, CompanySearchFilters, CompanySearchResponse } from '../types/company';
 
 // Helper function to generate pagination range
 function generatePaginationRange(currentPage: number, totalPages: number) {
   const delta = 2; // Number of pages to show on each side of current page
   const range = [];
   const rangeWithDots = [];
+  let l;
 
-  // Always show first page
   range.push(1);
+
+  if (totalPages <= 1) {
+    return range;
+  }
 
   for (let i = currentPage - delta; i <= currentPage + delta; i++) {
     if (i > 1 && i < totalPages) {
       range.push(i);
     }
   }
+  range.push(totalPages);
 
-  // Always show last page
-  if (totalPages > 1) {
-    range.push(totalPages);
-  }
-
-  // Add dots where needed
-  let l;
-  for (let i of range) {
+  for (let i = 0; i < range.length; i++) {
     if (l) {
-      if (i - l === 2) {
+      if (range[i] - l === 2) {
         rangeWithDots.push(l + 1);
-      } else if (i - l !== 1) {
+      } else if (range[i] - l !== 1) {
         rangeWithDots.push('...');
       }
     }
-    rangeWithDots.push(i);
-    l = i;
+    rangeWithDots.push(range[i]);
+    l = range[i];
   }
 
   return rangeWithDots;
@@ -53,6 +51,7 @@ const SearchPage: React.FC = () => {
   const [industries, setIndustries] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     companyService.getIndustries().then(setIndustries);
@@ -60,14 +59,17 @@ const SearchPage: React.FC = () => {
   }, []);
 
   const searchCompanies = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
       const response = await companyService.searchCompanies(filters);
       setCompanies(response.companies);
       setTotalPages(response.totalPages);
       setTotalCompanies(response.totalCompanies);
-    } catch (error) {
-      console.error('Error searching companies:', error);
+    } catch (err) {
+      setError('Failed to load companies');
+      console.error('Error fetching companies:', err);
     } finally {
       setLoading(false);
     }
@@ -104,6 +106,8 @@ const SearchPage: React.FC = () => {
       console.error('Error saving company:', error);
     }
   };
+
+  const paginationRange = generatePaginationRange(filters.page || 1, totalPages);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -152,6 +156,21 @@ const SearchPage: React.FC = () => {
               </div>
 
               <div className="p-6">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {loading ? (
                   <div className="flex justify-center items-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
@@ -192,7 +211,7 @@ const SearchPage: React.FC = () => {
                       </button>
 
                       {/* Page Numbers */}
-                      {generatePaginationRange(filters.page || 1, totalPages).map((pageNumber, idx) => (
+                      {paginationRange.map((pageNumber, idx) => (
                         pageNumber === '...' ? (
                           <span
                             key={`ellipsis-${idx}`}
@@ -203,7 +222,7 @@ const SearchPage: React.FC = () => {
                         ) : (
                           <button
                             key={pageNumber}
-                            onClick={() => handlePageChange(pageNumber as number)}
+                            onClick={() => handlePageChange(Number(pageNumber))}
                             className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                               pageNumber === (filters.page || 1)
                                 ? 'z-10 bg-indigo-600 border-indigo-600 text-white'

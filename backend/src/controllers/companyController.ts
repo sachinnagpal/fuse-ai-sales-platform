@@ -11,7 +11,12 @@ export const companyController = {
         country,
         size,
         page = 1,
-        limit = 10
+        limit = 10,
+        region,
+        locality,
+        yearFoundStart,
+        yearFoundEnd,
+
       } = req.query;
 
       let query: any = {};
@@ -29,6 +34,17 @@ export const companyController = {
       if (size) {
         query.size = size;
       }
+      
+      if (region) {
+        query.region = region;
+      }
+      if (locality) {
+        query.locality = locality;
+      }
+      if (yearFoundStart && yearFoundEnd) {
+          query.founded = { $gte: yearFoundStart, $lte: yearFoundEnd };
+      }
+      
       
 
       // Calculate skip value for pagination

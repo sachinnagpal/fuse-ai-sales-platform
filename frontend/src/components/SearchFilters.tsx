@@ -15,11 +15,16 @@ function SearchFilters({ filters, onFilterChange, onSearch, industries, countrie
     onSearch();
   };
 
-  const handleChange = (field: keyof CompanySearchFilters, value: string | [number, number]) => {
+  const handleChange = (field: keyof CompanySearchFilters, value: string | number | undefined) => {
     onFilterChange({
       ...filters,
-      [field]: value,
+      [field]: value === '' ? undefined : value,
     });
+  };
+
+  const handleYearChange = (field: 'yearFoundStart' | 'yearFoundEnd', value: string) => {
+    const yearValue = value === '' ? undefined : parseInt(value);
+    handleChange(field, yearValue);
   };
 
   return (
@@ -64,9 +69,11 @@ function SearchFilters({ filters, onFilterChange, onSearch, industries, countrie
             className="select mt-1"
           >
             <option value="">Any Size</option>
-            <option value="1-50">1-50 employees</option>
+            <option value="1-10">1-10 employees</option>
+            <option value="11-50">11-50 employees</option>
             <option value="51-200">51-200 employees</option>
-            <option value="201-1000">201-1000 employees</option>
+            <option value="201-500">201-500 employees</option>
+            <option value="501-1000">501-1000 employees</option>
             <option value="1001-5000">1001-5000 employees</option>
             <option value="5000+">5000+ employees</option>
           </select>
@@ -75,58 +82,66 @@ function SearchFilters({ filters, onFilterChange, onSearch, industries, countrie
           </p>
         </div>
 
-        {/* Revenue */}
+        {/* Country */}
         <div>
-          <label htmlFor="revenue" className="block text-sm font-medium text-gray-700">
-            Annual Revenue
+          <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+            Country
           </label>
           <select
-            id="revenue"
-            value={filters.revenue || ''}
-            onChange={(e) => handleChange('revenue', e.target.value)}
+            id="country"
+            value={filters.country || ''}
+            onChange={(e) => handleChange('country', e.target.value)}
             className="select mt-1"
           >
-            <option value="">Any Revenue</option>
-            <option value="$0-$1M">$0-$1M</option>
-            <option value="$1M-$10M">$1M-$10M</option>
-            <option value="$10M-$50M">$10M-$50M</option>
-            <option value="$50M-$100M">$50M-$100M</option>
-            <option value="$100M+">$100M+</option>
+            <option value="">Any Country</option>
+            {countries.map((country) => (
+              <option key={country} value={country}>
+                {country}
+              </option>
+            ))}
           </select>
           <p className="mt-1 text-sm text-gray-500">
-            Filter by annual revenue range
+            Filter by company's country
           </p>
         </div>
 
-        {/* Location */}
+        {/* Region */}
         <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-            Location
+          <label htmlFor="region" className="block text-sm font-medium text-gray-700">
+            Region/State/Province
           </label>
-          <div className="mt-1 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
+          <div className="mt-1">
             <input
               type="text"
-              id="location"
-              value={filters.location || ''}
-              onChange={(e) => handleChange('location', e.target.value)}
-              placeholder="Enter city, state, or country"
-              className="input pl-10"
-              list="countries"
+              id="region"
+              value={filters.region || ''}
+              onChange={(e) => handleChange('region', e.target.value)}
+              placeholder="e.g. California, Ontario"
+              className="input"
             />
-            <datalist id="countries">
-              {countries.map((country) => (
-                <option key={country} value={country} />
-              ))}
-            </datalist>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Filter by company location
+            Filter by region, state, or province
+          </p>
+        </div>
+
+        {/* Locality */}
+        <div>
+          <label htmlFor="locality" className="block text-sm font-medium text-gray-700">
+            City/Town
+          </label>
+          <div className="mt-1">
+            <input
+              type="text"
+              id="locality"
+              value={filters.locality || ''}
+              onChange={(e) => handleChange('locality', e.target.value)}
+              placeholder="e.g. San Francisco, Toronto"
+              className="input"
+            />
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Filter by city or town
           </p>
         </div>
 
@@ -137,18 +152,19 @@ function SearchFilters({ filters, onFilterChange, onSearch, industries, countrie
           </label>
           <div className="mt-1 grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="yearFoundedStart" className="sr-only">
+              <label htmlFor="yearFoundStart" className="sr-only">
                 Start Year
               </label>
               <div className="relative">
                 <input
                   type="number"
-                  id="yearFoundedStart"
-                  value={filters.yearFounded?.[0] || 1900}
-                  onChange={(e) => handleChange('yearFounded', [parseInt(e.target.value), filters.yearFounded?.[1] || 2024])}
+                  id="yearFoundStart"
+                  value={filters.yearFoundStart || ''}
+                  onChange={(e) => handleYearChange('yearFoundStart', e.target.value)}
                   min="1900"
                   max="2024"
                   className="input pr-12"
+                  placeholder="1900"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <span className="text-gray-500 sm:text-sm">Start</span>
@@ -156,18 +172,19 @@ function SearchFilters({ filters, onFilterChange, onSearch, industries, countrie
               </div>
             </div>
             <div>
-              <label htmlFor="yearFoundedEnd" className="sr-only">
+              <label htmlFor="yearFoundEnd" className="sr-only">
                 End Year
               </label>
               <div className="relative">
                 <input
                   type="number"
-                  id="yearFoundedEnd"
-                  value={filters.yearFounded?.[1] || 2024}
-                  onChange={(e) => handleChange('yearFounded', [filters.yearFounded?.[0] || 1900, parseInt(e.target.value)])}
+                  id="yearFoundEnd"
+                  value={filters.yearFoundEnd || ''}
+                  onChange={(e) => handleYearChange('yearFoundEnd', e.target.value)}
                   min="1900"
                   max="2024"
                   className="input pr-12"
+                  placeholder="2024"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                   <span className="text-gray-500 sm:text-sm">End</span>

@@ -6,6 +6,11 @@ interface CompanyCardProps {
 }
 
 function CompanyCard({ company, onSave }: CompanyCardProps) {
+  // Format location string
+  const location = [company.locality, company.region, company.country]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <div className="bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow duration-200">
       <div className="p-6">
@@ -20,7 +25,7 @@ function CompanyCard({ company, onSave }: CompanyCardProps) {
                 <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span>Founded {company.yearFounded}</span>
+                <span>Founded {company.founded}</span>
               </div>
               <span className="text-gray-300">•</span>
               <div className="flex items-center">
@@ -28,7 +33,7 @@ function CompanyCard({ company, onSave }: CompanyCardProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span>{company.location}</span>
+                <span>{location}</span>
               </div>
             </div>
           </div>
@@ -49,9 +54,9 @@ function CompanyCard({ company, onSave }: CompanyCardProps) {
                 </svg>
               </a>
             )}
-            {company.linkedin && (
+            {company.linkedin_url && (
               <a
-                href={company.linkedin}
+                href={company.linkedin_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-50"
@@ -97,9 +102,6 @@ function CompanyCard({ company, onSave }: CompanyCardProps) {
           </span>
           <span className="badge badge-green">
             {company.size} employees
-          </span>
-          <span className="badge badge-purple">
-            {company.revenue}
           </span>
         </div>
       </div>
