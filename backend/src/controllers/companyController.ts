@@ -104,6 +104,23 @@ export const companyController = {
     }
   },
 
+  // Unsave company from prospects
+  async unsaveCompany(req: Request, res: Response) {
+    try {
+      const company = await Company.findByIdAndUpdate(
+        req.params.id,
+        { isSaved: false },
+        { new: true }
+      );
+      if (!company) {
+        return res.status(404).json({ message: 'Company not found' });
+      }
+      res.json(company);
+    } catch (error) {
+      res.status(500).json({ message: 'Error unsaving company', error });
+    }
+  },
+
   // Get saved companies
   async getSavedCompanies(req: Request, res: Response) {
     try {

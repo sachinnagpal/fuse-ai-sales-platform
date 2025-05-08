@@ -39,19 +39,17 @@ const SavedCompaniesPage: React.FC = () => {
     setPage(value);
   };
 
-  const handleSaveCompany = async (id: string) => {
+  const handleSaveCompany = async (id: string, isSaved: boolean) => {
     try {
-      await companyService.saveCompany(id);
-      // Update the company in the list
-      setCompanies(prevCompanies =>
-        prevCompanies.map(company =>
-          company._id === id ? { ...company, isSaved: false } : company
-        )
-      );
-      // Refresh the list if the company was removed
-      fetchSavedCompanies();
+      if (isSaved) {
+        await companyService.saveCompany(id);
+      } else {
+        await companyService.unsaveCompany(id);
+        // Remove the company from the list since it's no longer saved
+        setCompanies(prevCompanies => prevCompanies.filter(company => company._id !== id));
+      }
     } catch (error) {
-      console.error('Error updating saved company:', error);
+      console.error('Error updating company save status:', error);
     }
   };
 

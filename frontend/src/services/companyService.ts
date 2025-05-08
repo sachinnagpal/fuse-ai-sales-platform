@@ -24,6 +24,12 @@ const companyService = {
     return response.data;
   },
 
+  // Unsave company from prospects
+  async unsaveCompany(id: string): Promise<Company> {
+    const response = await axios.post(`${API_URL}/companies/${id}/unsave`);
+    return response.data;
+  },
+
   // Get saved companies
   async getSavedCompanies(page: number = 1, limit: number = 10): Promise<CompanySearchResponse> {
     const response = await axios.get(`${API_URL}/companies/saved/list`, {

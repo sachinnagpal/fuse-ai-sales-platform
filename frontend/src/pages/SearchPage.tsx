@@ -94,16 +94,20 @@ const SearchPage: React.FC = () => {
     setFilters(prev => ({ ...prev, page: pageNumber }));
   };
 
-  const handleSaveCompany = async (id: string) => {
+  const handleSaveCompany = async (id: string, isSaved: boolean) => {
     try {
-      await companyService.saveCompany(id);
+      if (isSaved) {
+        await companyService.saveCompany(id);
+      } else {
+        await companyService.unsaveCompany(id);
+      }
       setCompanies(prevCompanies =>
         prevCompanies.map(company =>
-          company._id === id ? { ...company, isSaved: true } : company
+          company._id === id ? { ...company, isSaved } : company
         )
       );
     } catch (error) {
-      console.error('Error saving company:', error);
+      console.error('Error updating company save status:', error);
     }
   };
 
@@ -181,7 +185,7 @@ const SearchPage: React.FC = () => {
                       <CompanyCard
                         key={company._id}
                         company={company}
-                        onSave={handleSaveCompany}
+                        onSave={(id, isSaved) => handleSaveCompany(id, isSaved)}
                       />
                     ))}
                   </div>
