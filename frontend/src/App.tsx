@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { useState } from 'react';
 import SearchPage from './pages/SearchPage';
 import SavedCompaniesPage from './pages/SavedCompaniesPage';
+import CompanyDetailPage from './pages/CompanyDetailPage';
 
 function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -111,6 +112,7 @@ function App() {
             <Routes>
               <Route path="/" element={<SearchPage />} />
               <Route path="/saved" element={<SavedCompaniesPage />} />
+              <Route path="/companies/:id" element={<CompanyDetailPage />} />
             </Routes>
           </div>
         </main>

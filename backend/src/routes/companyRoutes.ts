@@ -1,5 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { companyController } from '../controllers/companyController';
+import express from 'express';
+import { CompanyDescriptionService } from '../services/CompanyDescriptionService';
 
 const router = Router();
 
@@ -23,5 +25,15 @@ router.post('/:id/unsave', companyController.unsaveCompany as RequestHandler);
 
 // Get saved companies
 router.get('/saved/list', companyController.getSavedCompanies as RequestHandler);
+
+// Generate description for a single company
+router.post('/:id/generate-description', async (req, res) => {
+  try {
+    const company = await CompanyDescriptionService.generateAndSaveDescription(req.params.id);
+    res.json(company);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router; 
