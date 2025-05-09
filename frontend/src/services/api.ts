@@ -1,7 +1,6 @@
-import axios from 'axios';
-import { Company } from '../types/company';
+import type { Company, CompanySearchFilters } from '../types/company';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 interface SearchParams {
   name?: string;
@@ -19,21 +18,88 @@ interface SearchResponse {
   totalCompanies: number;
 }
 
-export const searchCompanies = async (params: SearchParams): Promise<SearchResponse> => {
-  const response = await axios.get(`${API_URL}/companies/search`, { params });
-  return response.data;
-};
+interface AISearchResponse extends SearchResponse {
+  searchCriteria: {
+    industries?: string[];
+    regions?: string[];
+    countries?: string[];
+    growthIndicators?: string[];
+    technologies?: string[];
+    yearFoundedRange?: {
+      start?: number;
+      end?: number;
+    };
+    size?: string[];
+    sortBy?: string[];
+  };
+}
 
-export const getCompanyById = async (id: string): Promise<Company> => {
-  const response = await axios.get(`${API_URL}/companies/${id}`);
-  return response.data;
-};
+export async function searchCompanies(params: CompanySearchFilters & { page: number; limit: number }): Promise<SearchResponse> {
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      queryParams.append(key, value.toString());
+    }
+  });
 
-export const saveCompany = async (companyId: string): Promise<void> => {
-  await axios.post(`${API_URL}/companies/save/${companyId}`);
-};
+  const response = await fetch(`${API_BASE_URL}/companies/search?${queryParams}`);
+  if (!response.ok) {
+    throw new Error('Failed to search companies');
+  }
+  return response.json();
+}
 
-export const getSavedCompanies = async (): Promise<Company[]> => {
-  const response = await axios.get(`${API_URL}/companies/saved`);
-  return response.data;
-}; 
+export async function aiSearchCompanies(query: string, page: number = 1, limit: number = 10): Promise<AISearchResponse> {
+  const queryParams = new URLSearchParams({
+    query,
+    page: page.toString(),
+    limit: limit.toString()
+  });
+
+  const response = await fetch(`${API_BASE_URL}/companies/ai-search?${queryParams}`);
+  if (!response.ok) {
+    throw new Error('Failed to perform AI search');
+  }
+  return response.json();
+}
+
+export async function getCompanyById(id: string): Promise<Company> {
+  const response = await fetch(`${API_BASE_URL}/companies/${id}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch company');
+  }
+  return response.json();
+}
+
+export async function saveCompany(companyId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/companies/${companyId}/save`, {
+    method: 'POST'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to save company');
+  }
+}
+
+export async function getSavedCompanies(): Promise<Company[]> {
+  const response = await fetch(`${API_BASE_URL}/companies/saved`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch saved companies');
+  }
+  return response.json();
+}
+
+export async function getUniqueIndustries(): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/companies/industries`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch industries');
+  }
+  return response.json();
+}
+
+export async function getUniqueCountries(): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/companies/countries`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch countries');
+  }
+  return response.json();
+} 

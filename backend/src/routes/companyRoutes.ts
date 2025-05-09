@@ -5,6 +5,9 @@ import { CompanyDescriptionService } from '../services/CompanyDescriptionService
 
 const router = Router();
 
+// AI-powered natural language search
+router.get('/ai-search', companyController.aiSearch as RequestHandler);
+
 // Search companies
 router.get('/search', companyController.searchCompanies as RequestHandler);
 

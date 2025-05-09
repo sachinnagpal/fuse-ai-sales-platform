@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Company, ICompany } from '../models/Company';
+import { AISearchService } from '../services/AISearchService';
 
 export const companyController = {
   // Search companies with filters and pagination
@@ -165,6 +166,55 @@ export const companyController = {
       res.json(countries);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching countries', error });
+    }
+  },
+
+  // AI-powered natural language search
+  async aiSearch(req: Request, res: Response) {
+    try {
+      const {
+        query,
+        page = 1,
+        limit = 10
+      } = req.query;
+
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: 'Search query is required' });
+      }
+
+      // Parse natural language query into structured criteria
+      const searchCriteria = await AISearchService.parseNaturalLanguageQuery(query);
+      
+      // Build MongoDB query from criteria
+      const mongoQuery = AISearchService.buildMongoQuery(searchCriteria);
+      
+      // Get sort options
+      const sortOptions = AISearchService.getSortOptions(searchCriteria);
+
+      // Calculate skip value for pagination
+      const skip = (Number(page) - 1) * Number(limit);
+
+      // Execute query with pagination and sorting
+      const companies = await Company.find(mongoQuery)
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(Number(limit))
+        .lean();
+
+      const total = await Company.countDocuments(mongoQuery);
+
+      const results = {
+        companies,
+        currentPage: Number(page),
+        totalPages: Math.ceil(total / Number(limit)),
+        totalCompanies: total,
+        searchCriteria // Include parsed criteria for debugging/UI feedback
+      };
+
+      res.json(results);
+    } catch (error: any) {
+      console.error('Error in AI search:', error);
+      res.status(500).json({ message: 'Error performing AI search', error: error.message });
     }
   }
 }; 

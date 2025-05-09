@@ -1,299 +1,246 @@
 import React, { useState, useEffect } from 'react';
-import CompanyCard from '../components/CompanyCard';
+import { 
+  Container, 
+  Grid, 
+  Typography, 
+  Box,
+  CircularProgress,
+  Pagination,
+  Paper,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  Collapse,
+  Button
+} from '@mui/material';
+import TuneIcon from '@mui/icons-material/Tune';
 import SearchFilters from '../components/SearchFilters';
-import companyService from '../services/companyService';
-import type { Company, CompanySearchFilters, CompanySearchResponse } from '../types/company';
-
-// Helper function to generate pagination range
-function generatePaginationRange(currentPage: number, totalPages: number) {
-  const delta = 2; // Number of pages to show on each side of current page
-  const range = [];
-  const rangeWithDots = [];
-  let l;
-
-  range.push(1);
-
-  if (totalPages <= 1) {
-    return range;
-  }
-
-  for (let i = currentPage - delta; i <= currentPage + delta; i++) {
-    if (i > 1 && i < totalPages) {
-      range.push(i);
-    }
-  }
-  range.push(totalPages);
-
-  for (let i = 0; i < range.length; i++) {
-    if (l) {
-      if (range[i] - l === 2) {
-        rangeWithDots.push(l + 1);
-      } else if (range[i] - l !== 1) {
-        rangeWithDots.push('...');
-      }
-    }
-    rangeWithDots.push(range[i]);
-    l = range[i];
-  }
-
-  return rangeWithDots;
-}
+import AISearchBar from '../components/AISearchBar';
+import CompanyCard from '../components/CompanyCard';
+import { searchCompanies, aiSearchCompanies, getUniqueIndustries, getUniqueCountries } from '../services/api';
+import type { Company, CompanySearchFilters } from '../types/company';
 
 const SearchPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCompanies, setTotalCompanies] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CompanySearchFilters>({
-    page: 1,
-    limit: 12,
+    industry: undefined,
+    size: undefined,
+    locality: undefined,
+    region: undefined,
+    country: undefined,
+    yearFoundStart: undefined,
+    yearFoundEnd: undefined
   });
   const [industries, setIndustries] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [searchCriteria, setSearchCriteria] = useState<any>(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCompanies: 0
+  });
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
-    companyService.getIndustries().then(setIndustries);
-    companyService.getCountries().then(setCountries);
+    const fetchFilterOptions = async () => {
+      try {
+        const [industriesData, countriesData] = await Promise.all([
+          getUniqueIndustries(),
+          getUniqueCountries()
+        ]);
+        setIndustries(industriesData);
+        setCountries(countriesData);
+      } catch (err) {
+        console.error('Error fetching filter options:', err);
+      }
+    };
+    fetchFilterOptions();
   }, []);
 
-  const searchCompanies = async () => {
-    setLoading(true);
-    setError(null);
+  const handleFilterChange = (newFilters: CompanySearchFilters) => {
+    setFilters(newFilters);
+  };
 
+  const handleSearch = async () => {
     try {
-      const response = await companyService.searchCompanies(filters);
+      setLoading(true);
+      setError(null);
+      const response = await searchCompanies({
+        ...filters,
+        page: 1,
+        limit: 10
+      });
       setCompanies(response.companies);
-      setTotalPages(response.totalPages);
-      setTotalCompanies(response.totalCompanies);
+      setPagination({
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        totalCompanies: response.totalCompanies
+      });
+      setSearchCriteria(null);
     } catch (err) {
-      setError('Failed to load companies');
-      console.error('Error fetching companies:', err);
+      setError('Error searching companies. Please try again.');
+      console.error('Search error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    searchCompanies();
-  }, [filters.page]);
-
-  const handleFilterChange = (newFilters: CompanySearchFilters) => {
-    setFilters({ ...newFilters, page: 1 });
-  };
-
-  const handleSearch = () => {
-    searchCompanies();
-    if (window.innerWidth < 768) {
-      setMobileFiltersOpen(false);
-    }
-  };
-
-  const handlePageChange = (pageNumber: number) => {
-    setFilters(prev => ({ ...prev, page: pageNumber }));
-  };
-
-  const handleSaveCompany = async (id: string, isSaved: boolean) => {
+  const handleAISearch = async (query: string) => {
     try {
-      if (isSaved) {
-        await companyService.saveCompany(id);
-      } else {
-        await companyService.unsaveCompany(id);
-      }
-      setCompanies(prevCompanies =>
-        prevCompanies.map(company =>
-          company._id === id ? { ...company, isSaved } : company
-        )
-      );
-    } catch (error) {
-      console.error('Error updating company save status:', error);
+      setLoading(true);
+      setError(null);
+      const response = await aiSearchCompanies(query, 1, 10);
+      setCompanies(response.companies);
+      setPagination({
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        totalCompanies: response.totalCompanies
+      });
+      setSearchCriteria({
+        ...response.searchCriteria,
+        lastQuery: query
+      });
+    } catch (err) {
+      setError('Error performing AI search. Please try again.');
+      console.error('AI Search error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const paginationRange = generatePaginationRange(filters.page || 1, totalPages);
+  const handlePageChange = async (event: React.ChangeEvent<unknown>, value: number) => {
+    try {
+      setLoading(true);
+      if (searchCriteria?.lastQuery) {
+        const response = await aiSearchCompanies(searchCriteria.lastQuery, value, 10);
+        setCompanies(response.companies);
+        setPagination({
+          currentPage: response.currentPage,
+          totalPages: response.totalPages,
+          totalCompanies: response.totalCompanies
+        });
+        setSearchCriteria({
+          ...response.searchCriteria,
+          lastQuery: searchCriteria.lastQuery
+        });
+      } else {
+        const response = await searchCompanies({
+          ...filters,
+          page: value,
+          limit: 10
+        });
+        setCompanies(response.companies);
+        setPagination({
+          currentPage: response.currentPage,
+          totalPages: response.totalPages,
+          totalCompanies: response.totalCompanies
+        });
+      }
+    } catch (err) {
+      setError('Error loading page. Please try again.');
+      console.error('Page change error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Company Search</h1>
-            <button
-              onClick={() => setMobileFiltersOpen(true)}
-              className="md:hidden btn btn-outline inline-flex items-center"
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Search Section */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom align="center" sx={{ mb: 3 }}>
+          Company Search
+        </Typography>
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <AISearchBar 
+            onSearch={handleAISearch}
+            searchCriteria={searchCriteria}
+            isLoading={loading}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Button
+              startIcon={<TuneIcon />}
+              onClick={() => setShowFilters(!showFilters)}
+              color="primary"
+              sx={{ textTransform: 'none' }}
             >
-              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              Filters
-            </button>
-          </div>
-        </div>
-      </header>
+              {showFilters ? 'Hide Advanced Filters' : 'Show Advanced Filters'}
+            </Button>
+          </Box>
+        </Box>
+      </Box>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Filters - Desktop */}
-          <div className="hidden md:block w-80 flex-shrink-0">
-            <div className="sticky top-8">
-              <SearchFilters
+      <Grid container spacing={3}>
+        {/* Filters Section */}
+        <Grid item xs={12} md={3}>
+          <Collapse in={showFilters}>
+            <Paper elevation={3} sx={{ p: 2, position: 'sticky', top: 20 }}>
+              <Typography variant="h6" gutterBottom>
+                Advanced Filters
+              </Typography>
+              <SearchFilters 
                 filters={filters}
                 onFilterChange={handleFilterChange}
                 onSearch={handleSearch}
                 industries={industries}
                 countries={countries}
               />
-            </div>
-          </div>
+            </Paper>
+          </Collapse>
+        </Grid>
 
-          {/* Results */}
-          <div className="flex-1">
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-medium text-gray-900">Search Results</h2>
-                  <p className="text-sm text-gray-500">{totalCompanies.toLocaleString()} companies found</p>
-                </div>
-              </div>
+        {/* Results Section */}
+        <Grid item xs={12} md={showFilters ? 9 : 12}>
+          <Paper elevation={3} sx={{ p: 2 }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6">
+                Search Results
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {pagination.totalCompanies.toLocaleString()} companies found
+              </Typography>
+            </Box>
 
-              <div className="p-6">
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-red-800">{error}</h3>
-                      </div>
-                    </div>
-                  </div>
-                )}
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : error ? (
+              <Typography color="error" sx={{ py: 2 }}>
+                {error}
+              </Typography>
+            ) : (
+              <>
+                <Grid container spacing={2}>
+                  {companies.map((company) => (
+                    <Grid item xs={12} sm={6} md={4} key={company._id}>
+                      <CompanyCard company={company} />
+                    </Grid>
+                  ))}
+                </Grid>
 
-                {loading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-600 border-t-transparent"></div>
-                  </div>
-                ) : companies.length > 0 ? (
-                  <div className="grid gap-6 md:grid-cols-2">
-                    {companies.map((company) => (
-                      <CompanyCard
-                        key={company._id}
-                        company={company}
-                        onSave={(id, isSaved) => handleSaveCompany(id, isSaved)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 className="mt-4 text-lg font-medium text-gray-900">No companies found</h3>
-                    <p className="mt-1 text-gray-500">Try adjusting your search filters or try a different search term.</p>
-                  </div>
-                )}
-
-                {totalPages > 1 && (
-                  <div className="mt-8 flex justify-center">
-                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                      {/* Previous Page */}
-                      <button
-                        onClick={() => handlePageChange(Math.max(1, (filters.page || 1) - 1))}
-                        disabled={filters.page === 1}
-                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="sr-only">Previous</span>
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-
-                      {/* Page Numbers */}
-                      {paginationRange.map((pageNumber, idx) => (
-                        pageNumber === '...' ? (
-                          <span
-                            key={`ellipsis-${idx}`}
-                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
-                          >
-                            ...
-                          </span>
-                        ) : (
-                          <button
-                            key={pageNumber}
-                            onClick={() => handlePageChange(Number(pageNumber))}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              pageNumber === (filters.page || 1)
-                                ? 'z-10 bg-indigo-600 border-indigo-600 text-white'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                            }`}
-                          >
-                            {pageNumber}
-                          </button>
-                        )
-                      ))}
-
-                      {/* Next Page */}
-                      <button
-                        onClick={() => handlePageChange(Math.min(totalPages, (filters.page || 1) + 1))}
-                        disabled={filters.page === totalPages}
-                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="sr-only">Next</span>
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </nav>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Mobile Filters Dialog */}
-      {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 bg-black bg-opacity-25" onClick={() => setMobileFiltersOpen(false)} />
-          <div className="fixed inset-y-0 right-0 pl-10 max-w-full flex">
-            <div className="w-screen max-w-md transform transition-transform duration-300 ease-in-out">
-              <div className="h-full flex flex-col bg-white shadow-xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-lg font-medium text-gray-900">Filters</h2>
-                  <button
-                    onClick={() => setMobileFiltersOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
-                  >
-                    <span className="sr-only">Close filters</span>
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  <div className="p-6">
-                    <SearchFilters
-                      filters={filters}
-                      onFilterChange={handleFilterChange}
-                      onSearch={handleSearch}
-                      industries={industries}
-                      countries={countries}
+                {pagination.totalPages > 1 && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                    <Pagination
+                      count={pagination.totalPages}
+                      page={pagination.currentPage}
+                      onChange={handlePageChange}
+                      color="primary"
+                      size={isMobile ? 'small' : 'medium'}
                     />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+                  </Box>
+                )}
+              </>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 
