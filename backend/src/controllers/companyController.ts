@@ -12,7 +12,7 @@ export const companyController = {
         country,
         size,
         page = 1,
-        limit = 10,
+        limit = 12,
         region,
         locality,
         yearFoundStart,
@@ -127,7 +127,7 @@ export const companyController = {
     try {
       const {
         page = 1,
-        limit = 10
+        limit = 12
       } = req.query;
 
       const skip = (Number(page) - 1) * Number(limit);

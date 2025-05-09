@@ -73,7 +73,7 @@ const SearchPage: React.FC = () => {
       const response = await searchCompanies({
         ...filters,
         page: 1,
-        limit: 10
+        limit: 12
       });
       setCompanies(response.companies);
       setPagination({
@@ -94,7 +94,7 @@ const SearchPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await aiSearchCompanies(query, 1, 10);
+      const response = await aiSearchCompanies(query, 1, 12);
       setCompanies(response.companies);
       setPagination({
         currentPage: response.currentPage,
@@ -117,7 +117,7 @@ const SearchPage: React.FC = () => {
     try {
       setLoading(true);
       if (searchCriteria?.lastQuery) {
-        const response = await aiSearchCompanies(searchCriteria.lastQuery, value, 10);
+        const response = await aiSearchCompanies(searchCriteria.lastQuery, value, 12);
         setCompanies(response.companies);
         setPagination({
           currentPage: response.currentPage,
@@ -132,7 +132,7 @@ const SearchPage: React.FC = () => {
         const response = await searchCompanies({
           ...filters,
           page: value,
-          limit: 10
+          limit: 12
         });
         setCompanies(response.companies);
         setPagination({
