@@ -5,10 +5,13 @@ import { CompanyDescriptionService } from '../services/CompanyDescriptionService
 
 const router = Router();
 
-// AI-powered natural language search
-router.get('/ai-search', companyController.aiSearch as RequestHandler);
+// Natural language to structured query search
+router.get('/natural-search', companyController.naturalLanguageSearch as RequestHandler);
 
-// Search companies
+// Advanced web search with enrichment
+router.get('/advanced-search', companyController.advancedSearch as RequestHandler);
+
+// Regular filter-based search
 router.get('/search', companyController.searchCompanies as RequestHandler);
 
 // Get unique industries

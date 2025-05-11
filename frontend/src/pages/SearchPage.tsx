@@ -187,6 +187,7 @@ const SearchPage: React.FC = () => {
                 filters={filters}
                 onFilterChange={handleFilterChange}
                 onSearch={handleSearch}
+                onAISearch={handleAISearch}
                 industries={industries}
                 countries={countries}
               />

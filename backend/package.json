@@ -32,7 +32,8 @@
     "ioredis": "^5.6.1",
     "mongoose": "^7.0.3",
     "morgan": "^1.10.0",
-    "openai": "^4.20.1"
+    "openai": "^4.98.0",
+    "zod": "^3.24.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.13",

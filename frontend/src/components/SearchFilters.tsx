@@ -5,14 +5,21 @@ interface SearchFiltersProps {
   filters: CompanySearchFilters;
   onFilterChange: (filters: CompanySearchFilters) => void;
   onSearch: () => void;
+  onAISearch: (query: string) => void;
   industries: string[];
   countries: string[];
 }
 
-function SearchFilters({ filters, onFilterChange, onSearch, industries, countries }: SearchFiltersProps) {
+function SearchFilters({ filters, onFilterChange, onSearch, onAISearch, industries, countries }: SearchFiltersProps) {
+  const [aiQuery, setAiQuery] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch();
+    if (aiQuery.trim()) {
+      onAISearch(aiQuery);
+    } else {
+      onSearch();
+    }
   };
 
   const handleChange = (field: keyof CompanySearchFilters, value: string | number | undefined) => {
@@ -34,6 +41,26 @@ function SearchFilters({ filters, onFilterChange, onSearch, industries, countrie
       </div>
 
       <div className="p-6 space-y-6">
+        {/* AI Search Input */}
+        <div>
+          <label htmlFor="aiSearch" className="block text-sm font-medium text-gray-700">
+            AI-Powered Search
+          </label>
+          <div className="mt-1">
+            <input
+              type="text"
+              id="aiSearch"
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+              placeholder="e.g., companies in manufacturing with more than 200 employees"
+              className="input w-full"
+            />
+          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Describe what you're looking for in natural language
+          </p>
+        </div>
+
         {/* Industry */}
         <div>
           <label htmlFor="industry" className="block text-sm font-medium text-gray-700">
