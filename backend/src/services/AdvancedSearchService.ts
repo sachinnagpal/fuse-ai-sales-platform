@@ -7,22 +7,6 @@ import { CompanySearchSchema } from './AISearchService';
 
 dotenv.config();
 
-// Define the schema for company data
-// const CompanyDataSchema = z.object({
-//   name: z.string(),
-//   linkedinUrl: z.string().url(),
-//   website: z.string().url().optional(),
-//   industry: z.string(),
-//   size: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']),
-//   location: z.object({
-//     country: z.string(),
-//     region: z.string().optional(),
-//     city: z.string().optional()
-//   }),
-//   founded: z.number().optional(),
-//   description: z.string(),
-//   products: z.array(z.string()).optional()
-// });
 
 // Schema for the array response
 const CompanyArraySchema = z.array(CompanySearchSchema);
@@ -53,33 +37,33 @@ export class AdvancedSearchService {
   }
 
   private static async getCompaniesFromAI(query: string): Promise<CompanyData[]> {
-    const prompt = `
-      Given the following search query about companies, provide a list of relevant companies with their details.
-      Query: "${query}"
-      
-      For each company, provide the following information in JSON format:
-      {
-        "name": "Company name",
-        "linkedinUrl": "LinkedIn profile URL",
-        "website": "Company website",
-        "industry": "Primary industry",
-        "size": "Company size (must be one of: "1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+")",
-        "location": {
-          "country": "Country",
-          "region": "Region/State",
-          "city": "City"
-        },
-        "founded": "Year founded",
-        "description": "Brief company description",
-      }
 
-      Return an array of company objects. Focus on providing accurate LinkedIn URLs as they are crucial for matching.
-      Include only companies that are likely to have a LinkedIn presence.
-      Return the response as a JSON array, not an object with a companies property.
-    `;
+    const prompt = `
+        Given the query: "${query}", return a JSON array of companies (no markdown).
+
+        Each object must have:
+        {
+          "name": "",
+          "linkedinUrl": "",
+          "website": "",
+          "industry": "",
+          "size": "", // One of: "1-10", "11-50", ..., "5000+"
+          "location": {
+            "country": "",
+            "region": "",
+            "city": ""
+          },
+          "founded": "",
+          "description": ""
+        }
+
+        Only include companies likely to be on LinkedIn.
+        Return only the array.
+      `;
+
 
     const { text } = await generateText({
-      model: openai('gpt-4-turbo-preview'),
+      model: openai('gpt-3.5-turbo'),
       system: 'You are a company information assistant that provides accurate company details with a focus on LinkedIn URLs for matching. Return only valid JSON array without any markdown formatting.',
       prompt,
     });
@@ -99,28 +83,48 @@ export class AdvancedSearchService {
 
   private static async matchWithDatabase(companies: CompanyData[]): Promise<any[]> {
     const enrichedCompanies = [];
+    const companiesToCreate = [];
 
+    // Prepare arrays for batch lookup
+    const linkedinUrls = companies
+      .map(company => company.linkedinUrl)
+      .filter((url): url is string => url !== undefined)
+      .map(url => this.cleanLinkedInUrl(url))
+      .filter((url): url is string => url !== null);
+
+    const companyNames = companies
+      .map(company => company.name)
+      .filter(name => name);
+
+    // Batch lookup by LinkedIn URLs
+    const linkedinMatches = await Company.find({
+      linkedin_url: { $in: linkedinUrls }
+    });
+
+    // Batch lookup by company names
+    const nameMatches = await Company.find({
+      name: { $in: companyNames }
+    });
+
+    // Create lookup maps for faster matching
+    const linkedinMap = new Map(linkedinMatches.map(company => [company.linkedin_url, company]));
+    const nameMap = new Map(nameMatches.map(company => [company.name, company]));
+
+    // Process each company
     for (const company of companies) {
       try {
-        // Try to find matching company in database using LinkedIn URL or name
-        const linkedinUrl = company.linkedinUrl;
+        const linkedinUrl = company.linkedinUrl ? this.cleanLinkedInUrl(company.linkedinUrl) : null;
         const companyName = company.name;
 
         if (!linkedinUrl && !companyName) continue;
 
         let dbCompany = null;
 
-        if (linkedinUrl) {
-          // Clean LinkedIn URL to match format in database
-          const cleanLinkedInUrl = this.cleanLinkedInUrl(linkedinUrl);
-          if (cleanLinkedInUrl) {
-            dbCompany = await Company.findOne({ linkedin_url: cleanLinkedInUrl });
-          }
-        }
-
-        // If no match found by LinkedIn URL, try company name
-        if (!dbCompany && companyName) {
-          dbCompany = await Company.findOne({ name: companyName });
+        // Try to find match using maps
+        if (linkedinUrl && linkedinMap.has(linkedinUrl)) {
+          dbCompany = linkedinMap.get(linkedinUrl);
+        } else if (companyName && nameMap.has(companyName)) {
+          dbCompany = nameMap.get(companyName);
         }
 
         if (dbCompany) {
@@ -136,10 +140,10 @@ export class AdvancedSearchService {
             }
           });
         } else {
-          // Create new company in database with required fields
-          const newCompany = new Company({
+          // Prepare company for batch creation
+          companiesToCreate.push({
             name: company.name || 'Unknown Company',
-            linkedin_url: company.linkedinUrl ? this.cleanLinkedInUrl(company.linkedinUrl) || 'unknown' : 'unknown',
+            linkedin_url: linkedinUrl || 'unknown',
             website: company.website || 'unknown',
             industry: company.industry || 'Unknown',
             size: company.size || 'Unknown',
@@ -150,28 +154,51 @@ export class AdvancedSearchService {
             description: company.description || '',
             isSaved: false
           });
-
-          const savedCompany = await newCompany.save();
-
-          // Return in same format as existing companies
-          enrichedCompanies.push({
-            ...company,
-            _id: savedCompany._id,
-            isInDatabase: true,
-            databaseData: {
-              saved: false,
-              lastUpdated: savedCompany.updatedAt,
-              additionalData: savedCompany
-            }
-          });
         }
       } catch (error) {
-        console.error('Error matching/saving company:', error);
-        // Include company even if matching/saving fails
+        console.error('Error processing company:', error);
         enrichedCompanies.push({
           ...company,
           isInDatabase: false,
-          matchError: 'Failed to match or save with database'
+          matchError: 'Failed to process company'
+        });
+      }
+    }
+
+    // Batch create new companies if any
+    if (companiesToCreate.length > 0) {
+      try {
+        const savedCompanies = await Company.insertMany(companiesToCreate);
+        
+        // Add newly created companies to enriched results
+        savedCompanies.forEach((savedCompany, index) => {
+          const originalCompany = companies.find(c => 
+            (c.linkedinUrl && this.cleanLinkedInUrl(c.linkedinUrl) === savedCompany.linkedin_url) ||
+            c.name === savedCompany.name
+          );
+
+          if (originalCompany) {
+            enrichedCompanies.push({
+              ...originalCompany,
+              _id: savedCompany._id,
+              isInDatabase: true,
+              databaseData: {
+                saved: false,
+                lastUpdated: savedCompany.updatedAt,
+                additionalData: savedCompany
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.error('Error batch creating companies:', error);
+        // Add companies that failed to be created
+        companiesToCreate.forEach(company => {
+          enrichedCompanies.push({
+            ...company,
+            isInDatabase: false,
+            matchError: 'Failed to create company in database'
+          });
         });
       }
     }
