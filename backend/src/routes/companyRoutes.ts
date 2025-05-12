@@ -2,6 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { companyController } from '../controllers/companyController';
 import express from 'express';
 import { CompanyDescriptionService } from '../services/CompanyDescriptionService';
+import { QueueService } from '../services/QueueService';
 
 const router = Router();
 
@@ -35,8 +36,31 @@ router.get('/saved/list', companyController.getSavedCompanies as RequestHandler)
 // Generate description for a single company
 router.post('/:id/generate-description', async (req, res) => {
   try {
-    const company = await CompanyDescriptionService.generateAndSaveDescription(req.params.id);
-    res.json(company);
+    const jobId = await QueueService.addDescriptionJob(req.params.id);
+    res.json({ 
+      message: 'Description generation job added to queue',
+      jobId 
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check description generation job status
+router.get('/description-job/:jobId', async (req, res) => {
+  try {
+    const status = await QueueService.getJobStatus(req.params.jobId);
+    res.json(status);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all jobs for a company
+router.get('/:id/jobs', async (req, res) => {
+  try {
+    const jobs = await QueueService.getCompanyJobs(req.params.id);
+    res.json(jobs);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
