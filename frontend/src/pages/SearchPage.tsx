@@ -20,6 +20,18 @@ import CompanyCard from '../components/CompanyCard';
 import { searchCompanies, aiSearchCompanies, getUniqueIndustries, getUniqueCountries, naturalSearchCompanies } from '../services/api';
 import type { Company, CompanySearchFilters } from '../types/company';
 
+function normalizeSearchCriteria(criteria: any) {
+  if (!criteria) return {};
+  return {
+    industries: criteria.industry ? [criteria.industry] : [],
+    countries: criteria.country ? [criteria.country] : [],
+    regions: criteria.region ? [criteria.region] : [],
+    size: criteria.size ? [criteria.size] : [],
+    yearFoundedRange: criteria.yearFoundedRange || undefined,
+    // add more mappings as needed
+  };
+}
+
 const SearchPage: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
@@ -102,7 +114,7 @@ const SearchPage: React.FC = () => {
         totalCompanies: response.totalCompanies
       });
       setSearchCriteria({
-        ...response.searchCriteria,
+        ...normalizeSearchCriteria(response.searchCriteria),
         lastQuery: query
       });
     } catch (err) {
@@ -125,7 +137,7 @@ const SearchPage: React.FC = () => {
         totalCompanies: response.totalCompanies
       });
       setSearchCriteria({
-        ...response.searchCriteria,
+        ...normalizeSearchCriteria(response.searchCriteria),
         lastQuery: query
       });
     } catch (err) {
@@ -213,6 +225,7 @@ const SearchPage: React.FC = () => {
                 onAISearch={handleNaturalAISearch}
                 industries={industries}
                 countries={countries}
+                searchCriteria={searchCriteria}
               />
             </Paper>
           </Collapse>

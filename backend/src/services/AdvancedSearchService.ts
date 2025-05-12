@@ -102,21 +102,26 @@ export class AdvancedSearchService {
 
     for (const company of companies) {
       try {
-        // Try to find matching company in database using LinkedIn URL
+        // Try to find matching company in database using LinkedIn URL or name
         const linkedinUrl = company.linkedinUrl;
-        if (!linkedinUrl) continue;
+        const companyName = company.name;
 
-        // Extract company identifier from LinkedIn URL
-        const linkedinIdentifier = this.extractLinkedInIdentifier(linkedinUrl);
-        if (!linkedinIdentifier) continue;
+        if (!linkedinUrl && !companyName) continue;
 
-        // Search in database using LinkedIn identifier
-        const dbCompany = await Company.findOne({
-          $or: [
-            { linkedinUrl: { $regex: linkedinIdentifier, $options: 'i' } },
-            { 'socialProfiles.linkedin': { $regex: linkedinIdentifier, $options: 'i' } }
-          ]
-        });
+        let dbCompany = null;
+
+        if (linkedinUrl) {
+          // Clean LinkedIn URL to match format in database
+          const cleanLinkedInUrl = this.cleanLinkedInUrl(linkedinUrl);
+          if (cleanLinkedInUrl) {
+            dbCompany = await Company.findOne({ linkedin_url: cleanLinkedInUrl });
+          }
+        }
+
+        // If no match found by LinkedIn URL, try company name
+        if (!dbCompany && companyName) {
+          dbCompany = await Company.findOne({ name: companyName });
+        }
 
         if (dbCompany) {
           // Enrich with database data
@@ -131,19 +136,42 @@ export class AdvancedSearchService {
             }
           });
         } else {
-          // Keep AI data as is
+          // Create new company in database with required fields
+          const newCompany = new Company({
+            name: company.name || 'Unknown Company',
+            linkedin_url: company.linkedinUrl ? this.cleanLinkedInUrl(company.linkedinUrl) || 'unknown' : 'unknown',
+            website: company.website || 'unknown',
+            industry: company.industry || 'Unknown',
+            size: company.size || 'Unknown',
+            country: company.country || 'Unknown',
+            region: company.region || 'Unknown',
+            locality: company.locality || 'Unknown',
+            founded: company.yearFoundStart || new Date().getFullYear(),
+            description: company.description || '',
+            isSaved: false
+          });
+
+          const savedCompany = await newCompany.save();
+
+          // Return in same format as existing companies
           enrichedCompanies.push({
             ...company,
-            isInDatabase: false
+            _id: savedCompany._id,
+            isInDatabase: true,
+            databaseData: {
+              saved: false,
+              lastUpdated: savedCompany.updatedAt,
+              additionalData: savedCompany
+            }
           });
         }
       } catch (error) {
-        console.error('Error matching company:', error);
-        // Include company even if matching fails
+        console.error('Error matching/saving company:', error);
+        // Include company even if matching/saving fails
         enrichedCompanies.push({
           ...company,
           isInDatabase: false,
-          matchError: 'Failed to match with database'
+          matchError: 'Failed to match or save with database'
         });
       }
     }
@@ -151,25 +179,20 @@ export class AdvancedSearchService {
     return enrichedCompanies;
   }
 
-  private static extractLinkedInIdentifier(url: string): string | null {
+  private static cleanLinkedInUrl(url: string): string | null {
     try {
-      // Handle different LinkedIn URL formats
-      const patterns = [
-        /linkedin\.com\/company\/([^\/\?]+)/i,
-        /linkedin\.com\/organization\/([^\/\?]+)/i,
-        /linkedin\.com\/showcase\/([^\/\?]+)/i
-      ];
-
-      for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match && match[1]) {
-          return match[1].toLowerCase();
-        }
+      // Remove protocol and www if present
+      const cleanUrl = url.replace(/^(https?:\/\/)?(www\.)?/i, '');
+      
+      // Extract company identifier
+      const match = cleanUrl.match(/linkedin\.com\/company\/([^\/\?]+)/i);
+      if (match && match[1]) {
+        return `linkedin.com/company/${match[1].toLowerCase()}`;
       }
-
+      
       return null;
     } catch (error) {
-      console.error('Error extracting LinkedIn identifier:', error);
+      console.error('Error cleaning LinkedIn URL:', error);
       return null;
     }
   }
