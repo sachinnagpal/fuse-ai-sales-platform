@@ -17,8 +17,9 @@ import TuneIcon from '@mui/icons-material/Tune';
 import SearchFilters from '../components/SearchFilters';
 import AISearchBar from '../components/AISearchBar';
 import CompanyCard from '../components/CompanyCard';
-import { searchCompanies, aiSearchCompanies, getUniqueIndustries, getUniqueCountries, naturalSearchCompanies } from '../services/api';
+import { searchCompanies, aiSearchCompanies, getUniqueIndustries, getUniqueCountries, naturalSearchCompanies, saveCompany, unsaveCompany } from '../services/api';
 import type { Company, CompanySearchFilters } from '../types/company';
+import { useSearchParams } from 'react-router-dom';
 
 function normalizeSearchCriteria(criteria: any) {
   if (!criteria) return {};
@@ -37,26 +38,57 @@ const SearchPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<CompanySearchFilters>({
-    industry: undefined,
-    size: undefined,
-    locality: undefined,
-    region: undefined,
-    country: undefined,
-    yearFoundStart: undefined,
-    yearFoundEnd: undefined
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Helper to parse params from URL
+  function getFiltersFromParams(params: URLSearchParams): CompanySearchFilters {
+    return {
+      industry: params.get('industry') || undefined,
+      size: params.get('size') || undefined,
+      locality: params.get('locality') || undefined,
+      region: params.get('region') || undefined,
+      country: params.get('country') || undefined,
+      yearFoundStart: params.get('yearFoundStart') ? Number(params.get('yearFoundStart')) : undefined,
+      yearFoundEnd: params.get('yearFoundEnd') ? Number(params.get('yearFoundEnd')) : undefined,
+    };
+  }
+  function getPageFromParams(params: URLSearchParams): number {
+    return params.get('page') ? Number(params.get('page')) : 1;
+  }
+
+  // Initialize state from URL
+  const [filters, setFilters] = useState<CompanySearchFilters>(() => getFiltersFromParams(searchParams));
   const [industries, setIndustries] = useState<string[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
   const [searchCriteria, setSearchCriteria] = useState<any>(null);
   const [pagination, setPagination] = useState({
-    currentPage: 1,
+    currentPage: getPageFromParams(searchParams),
     totalPages: 1,
     totalCompanies: 0
   });
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // When filters or page change, update URL
+  useEffect(() => {
+    const params: any = { ...filters };
+    if (pagination.currentPage && pagination.currentPage !== 1) {
+      params.page = pagination.currentPage;
+    }
+    Object.keys(params).forEach((key) => {
+      if (params[key] === undefined || params[key] === '') {
+        delete params[key];
+      }
+    });
+    setSearchParams(params, { replace: true });
+  }, [filters, pagination.currentPage]);
+
+  // On mount, if URL params change (e.g. via back/forward), update state
+  useEffect(() => {
+    setFilters(getFiltersFromParams(searchParams));
+    setPagination((prev) => ({ ...prev, currentPage: getPageFromParams(searchParams) }));
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -184,6 +216,31 @@ const SearchPage: React.FC = () => {
     }
   };
 
+  const handleSaveCompany = async (companyId: string, isSaved: boolean) => {
+    try {
+      if (isSaved) {
+        await saveCompany(companyId);
+      } else {
+        await unsaveCompany(companyId);
+      }
+      setCompanies((prev) =>
+        prev.map((c) =>
+          c._id === companyId ? { ...c, isSaved } : c
+        )
+      );
+    } catch (err) {
+      console.error('Error saving/unsaving company:', err);
+    }
+  };
+
+  // Trigger search when filters or page change (from URL)
+  useEffect(() => {
+    if (!loading) {
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, pagination.currentPage]);
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Search Section */}
@@ -256,7 +313,7 @@ const SearchPage: React.FC = () => {
                 <Grid container spacing={2}>
                   {companies.map((company) => (
                     <Grid item xs={12} sm={6} md={4} key={company._id}>
-                      <CompanyCard company={company} />
+                      <CompanyCard company={company} onSave={handleSaveCompany} />
                     </Grid>
                   ))}
                 </Grid>

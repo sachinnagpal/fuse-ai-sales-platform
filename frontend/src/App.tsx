@@ -47,16 +47,6 @@ function App() {
               {/* Spacer */}
               <div className="flex-grow" />
 
-              {/* Action Buttons */}
-              <div className="hidden md:flex items-center space-x-4">
-                <button className="btn btn-outline">
-                  Talk to Sales
-                </button>
-                <button className="btn btn-primary">
-                  Start Free Trial
-                </button>
-              </div>
-
               {/* Mobile Menu Button */}
               <button 
                 className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
@@ -93,14 +83,6 @@ function App() {
                   </svg>
                   Saved Companies
                 </Link>
-                <div className="space-y-2 pt-2 border-t border-gray-200">
-                  <button className="btn btn-outline w-full">
-                    Talk to Sales
-                  </button>
-                  <button className="btn btn-primary w-full">
-                    Start Free Trial
-                  </button>
-                </div>
               </div>
             </div>
           )}

@@ -1,26 +1,36 @@
-# AI-Powered Company Prospecting Tool
+# 🚀 AI-Powered Company Prospecting Tool
 
 A B2B sales intelligence platform that enables sales teams to discover, research, and save high-potential companies using rich filters and AI-powered enrichment.
 
-## Project Structure
+## ✨ Key Features
 
-```
-fuse-ai-sales-platform/
-├── backend/           # Node.js/Express backend
-├── frontend/         # React frontend
-├── database/         # Database schemas and migrations
-└── docs/            # Documentation
-```
+### Core Features
+- 🔍 Advanced company search with multiple filters
+- 📊 Real-time data enrichment
+- 💾 Save and manage prospect lists
+- 🔄 Real-time progress tracking
+- 📱 Responsive modern UI
+- ⚡ Fast and efficient web scraping
+- 🔌 Real-time updates via WebSocket
 
-## Tech Stack
+### Technical Achievements
+- 🚀 Implemented efficient queue system for long-running tasks
+- 🔒 Built-in rate limiting and security measures
+- 📈 Scalable architecture with MongoDB
+- 🔄 Real-time progress updates using Socket.IO
+- ⚡ Optimized web scraping with Cheerio
+
+## 🛠️ Tech Stack
 
 - **Backend**: Node.js with Express
 - **Frontend**: React with TypeScript
 - **Database**: MongoDB
 - **AI Integration**: OpenAI API
-- **Web Scraping**: Puppeteer
+- **Web Scraping**: Cheerio (with plans to integrate Puppeteer)
+- **Real-time Updates**: Socket.IO
+- **Queue Management**: Custom Queue Service
 
-## Setup Instructions
+## 🚀 Setup Instructions
 
 ### Prerequisites
 
@@ -45,6 +55,7 @@ fuse-ai-sales-platform/
    PORT=3001
    MONGODB_URI=mongodb://localhost:27017/company-prospector
    OPENAI_API_KEY=your_openai_api_key
+   FRONTEND_URL=http://localhost:5173
    ```
 
 4. Start the development server:
@@ -66,43 +77,90 @@ fuse-ai-sales-platform/
 
 3. Create a `.env` file:
    ```
-   REACT_APP_API_URL=http://localhost:3001
+   VITE_API_URL=http://localhost:3001
    ```
 
 4. Start the development server:
    ```bash
-   npm start
+   npm run dev
    ```
 
-## Features
+## 🏗️ Architecture
 
-### MVP Features
-- [x] Company search with filters
-- [x] Paginated results
-- [x] Save companies to prospect list
-- [x] Basic company information display
+### System Components
 
-### Future Enhancements
-- [ ] AI-powered company enrichment
-- [ ] Advanced free-text search
-- [ ] Company website scraping
-- [ ] Enhanced filtering capabilities
-- [ ] User authentication
-- [ ] Export functionality
+1. **Frontend (React + TypeScript)**
+   - Modern UI with responsive design
+   - Real-time updates using Socket.IO
+   - State management with React Query
 
-## Architecture
+2. **Backend (Node.js + Express)**
+   - RESTful API endpoints
+   - WebSocket server for real-time updates
+   - Queue service for handling long-running tasks
+   - Rate limiting and security middleware
 
-The application follows a client-server architecture with the following components:
+3. **Database (MongoDB)**
+   - Flexible schema design
+   - Efficient indexing for search operations
+   - Scalable document storage
 
-1. **Frontend**: React application handling UI/UX
-2. **Backend**: Express API server
-3. **Database**: MongoDB for data persistence
-4. **AI Service**: OpenAI integration for company enrichment
+4. **Queue Service**
+   - Handles asynchronous tasks
+   - Manages web scraping operations
+   - Provides real-time progress updates
 
-## Development Status
+### Design Choices
 
-Currently implementing MVP features:
-- Basic project structure
-- Database schema design
-- API endpoints
-- Frontend components 
+1. **Cheerio over Puppeteer**
+   - Initially chosen for lightweight web scraping
+   - Faster execution time
+   - Lower resource consumption
+   - Future plan to integrate Puppeteer for more complex scraping
+
+2. **Socket.IO Integration**
+   - Real-time updates for queue progress
+   - Enhanced user experience
+   - Efficient bi-directional communication
+
+3. **Queue System**
+   - Handles long-running tasks asynchronously
+   - Prevents server overload
+   - Provides progress tracking
+
+## 🔄 Roadmap & Future Plans
+
+### Planned Enhancements
+
+1. **Feature Improvements**
+   - Advanced filtering capabilities
+   - Enhanced company enrichment
+   - Export functionality
+   - User authentication and authorization
+   - Analytics dashboard
+
+2. **Technical Improvements**
+   - Implement Puppeteer for advanced web scraping
+   - Add Redis for caching
+   - Implement comprehensive API documentation
+   - Add input validation middleware
+   - Implement unit and integration tests
+
+3. **Performance Optimizations**
+   - Implement query caching
+   - Optimize database queries
+   - Add request rate limiting
+   - Implement connection pooling
+
+### Current Limitations & Next Steps
+
+1. **UI/UX Enhancements** 🎨
+   - Region/Locality dropdown selection
+   - Improved company size filtering
+   - Enhanced data visualization
+
+2. **Technical Optimizations** ⚡
+   - Query and prompt caching implementation
+   - API documentation with Swagger
+   - Input validation middleware
+   - Comprehensive test coverage

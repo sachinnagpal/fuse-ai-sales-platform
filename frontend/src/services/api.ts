@@ -116,4 +116,13 @@ export async function getUniqueCountries(): Promise<string[]> {
     throw new Error('Failed to fetch countries');
   }
   return response.json();
+}
+
+export async function unsaveCompany(companyId: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/companies/${companyId}/unsave`, {
+    method: 'POST'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to unsave company');
+  }
 } 
