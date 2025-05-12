@@ -8,7 +8,7 @@ import { openai } from '@ai-sdk/openai';
 dotenv.config();
 
 // Define the schema for company search criteria
-const CompanySearchSchema = z.object({
+export const CompanySearchSchema = z.object({
   industry: z.string().optional(),
   size: z.string().optional(),
   country: z.string().optional(),
@@ -16,6 +16,11 @@ const CompanySearchSchema = z.object({
   locality: z.string().optional(),
   yearFoundStart: z.number().optional(),
   yearFoundEnd: z.number().optional(),
+  linkedinUrl: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  products: z.array(z.string()).optional(),
+  website: z.string().optional(),
 });
 
 type CompanySearchCriteria = z.infer<typeof CompanySearchSchema>;

@@ -17,7 +17,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import SearchFilters from '../components/SearchFilters';
 import AISearchBar from '../components/AISearchBar';
 import CompanyCard from '../components/CompanyCard';
-import { searchCompanies, aiSearchCompanies, getUniqueIndustries, getUniqueCountries } from '../services/api';
+import { searchCompanies, aiSearchCompanies, getUniqueIndustries, getUniqueCountries, naturalSearchCompanies } from '../services/api';
 import type { Company, CompanySearchFilters } from '../types/company';
 
 const SearchPage: React.FC = () => {
@@ -113,6 +113,29 @@ const SearchPage: React.FC = () => {
     }
   };
 
+  const handleNaturalAISearch = async (query: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await naturalSearchCompanies(query, 1, 12);
+      setCompanies(response.companies);
+      setPagination({
+        currentPage: response.currentPage,
+        totalPages: response.totalPages,
+        totalCompanies: response.totalCompanies
+      });
+      setSearchCriteria({
+        ...response.searchCriteria,
+        lastQuery: query
+      });
+    } catch (err) {
+      setError('Error performing AI search. Please try again.');
+      console.error('AI Search error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePageChange = async (event: React.ChangeEvent<unknown>, value: number) => {
     try {
       setLoading(true);
@@ -187,7 +210,7 @@ const SearchPage: React.FC = () => {
                 filters={filters}
                 onFilterChange={handleFilterChange}
                 onSearch={handleSearch}
-                onAISearch={handleAISearch}
+                onAISearch={handleNaturalAISearch}
                 industries={industries}
                 countries={countries}
               />

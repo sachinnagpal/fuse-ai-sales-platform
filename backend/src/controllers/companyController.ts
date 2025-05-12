@@ -169,59 +169,6 @@ export const companyController = {
     }
   },
 
-  // AI-powered natural language search
-  async aiSearch(req: Request, res: Response) {
-    try {
-      const {
-        query,
-        page = 1,
-        limit = 10
-      } = req.query;
-
-      if (!query || typeof query !== 'string') {
-        return res.status(400).json({ message: 'Search query is required' });
-      }
-
-      // Parse natural language query into structured criteria
-      const searchCriteria = await NaturalLanguageSearchService.parseNaturalLanguageQuery(query);
-      
-      // Build MongoDB query from criteria
-      const mongoQuery = NaturalLanguageSearchService.buildMongoQuery(searchCriteria);
-      
-      // Get sort options
-      const sortOptions = NaturalLanguageSearchService.getSortOptions(searchCriteria);
-
-      // Calculate skip value for pagination
-      const skip = (Number(page) - 1) * Number(limit);
-
-      // Execute query with pagination and sorting
-      const companies = await Company.find(mongoQuery)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(Number(limit))
-        .lean();
-
-      const total = await Company.countDocuments(mongoQuery);
-
-      const results = {
-        companies,
-        currentPage: Number(page),
-        totalPages: Math.ceil(total / Number(limit)),
-        totalCompanies: total,
-        searchCriteria // Include parsed criteria for debugging/UI feedback
-      };
-
-      res.json(results);
-    } catch (error: any) {
-      console.error('Error in AI search:', error);
-      res.status(500).json({ 
-        message: 'Error performing AI search', 
-        error: error.message,
-        details: error.stack
-      });
-    }
-  },
-
   // Natural language to structured query search
   async naturalLanguageSearch(req: Request, res: Response) {
     try {
@@ -239,6 +186,7 @@ export const companyController = {
       const searchCriteria = await NaturalLanguageSearchService.parseNaturalLanguageQuery(query);
       
       // Build MongoDB query from criteria
+      console.log(searchCriteria);
       const mongoQuery = NaturalLanguageSearchService.buildMongoQuery(searchCriteria);
       
       // Get sort options
@@ -269,6 +217,48 @@ export const companyController = {
       console.error('Error in natural language search:', error);
       res.status(500).json({ 
         message: 'Error performing natural language search', 
+        error: error.message,
+        details: error.stack
+      });
+    }
+  },
+
+  // AI-powered web search with database enrichment
+  async aiSearch(req: Request, res: Response) {
+    try {
+      const {
+        query,
+        page = 1,
+        limit = 10
+      } = req.query;
+
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ message: 'Search query is required' });
+      }
+
+      // Perform advanced search with web data enrichment
+      const results = await AdvancedSearchService.searchCompanies(query);
+
+      // Apply pagination to the results
+      const startIndex = (Number(page) - 1) * Number(limit);
+      const endIndex = startIndex + Number(limit);
+      const paginatedCompanies = results.companies.slice(startIndex, endIndex);
+
+      res.json({
+        companies: paginatedCompanies,
+        currentPage: Number(page),
+        totalPages: Math.ceil(results.companies.length / Number(limit)),
+        totalCompanies: results.companies.length,
+        searchMetadata: {
+          ...results.searchMetadata,
+          searchType: 'ai_web_search',
+          description: 'Results enriched with web search data and AI analysis'
+        }
+      });
+    } catch (error: any) {
+      console.error('Error in AI search:', error);
+      res.status(500).json({ 
+        message: 'Error performing AI search', 
         error: error.message,
         details: error.stack
       });

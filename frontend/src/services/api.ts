@@ -56,9 +56,23 @@ export async function aiSearchCompanies(query: string, page: number = 1, limit: 
     limit: limit.toString()
   });
 
-  const response = await fetch(`${API_BASE_URL}/companies/natural-search?${queryParams}`);
+  const response = await fetch(`${API_BASE_URL}/companies/ai-search?${queryParams}`);
   if (!response.ok) {
     throw new Error('Failed to perform AI search');
+  }
+  return response.json();
+}
+
+export async function naturalSearchCompanies(query: string, page: number = 1, limit: number = 10): Promise<AISearchResponse> {
+  const queryParams = new URLSearchParams({
+    query,
+    page: page.toString(),
+    limit: limit.toString()
+  });
+
+  const response = await fetch(`${API_BASE_URL}/companies/natural-search?${queryParams}`);
+  if (!response.ok) {
+    throw new Error('Failed to perform natural language search');
   }
   return response.json();
 }

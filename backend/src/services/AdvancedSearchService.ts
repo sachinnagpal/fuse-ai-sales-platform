@@ -1,46 +1,49 @@
-import { OpenAI } from 'openai';
-import axios from 'axios';
+import { generateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 import { Company } from '../models/Company';
+import { z } from 'zod';
 import dotenv from 'dotenv';
+import { CompanySearchSchema } from './AISearchService';
 
 dotenv.config();
 
+// Define the schema for company data
+// const CompanyDataSchema = z.object({
+//   name: z.string(),
+//   linkedinUrl: z.string().url(),
+//   website: z.string().url().optional(),
+//   industry: z.string(),
+//   size: z.enum(['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']),
+//   location: z.object({
+//     country: z.string(),
+//     region: z.string().optional(),
+//     city: z.string().optional()
+//   }),
+//   founded: z.number().optional(),
+//   description: z.string(),
+//   products: z.array(z.string()).optional()
+// });
+
+// Schema for the array response
+const CompanyArraySchema = z.array(CompanySearchSchema);
+
+type CompanyData = z.infer<typeof CompanySearchSchema>;
+
 export class AdvancedSearchService {
-  private static openai: OpenAI;
-  private static readonly SERP_API_KEY = process.env.SERP_API_KEY;
-  private static readonly GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-  private static readonly GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID;
-
-  static {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not set in environment variables');
-    }
-    this.openai = new OpenAI({
-      apiKey: apiKey,
-    });
-  }
-
   static async searchCompanies(query: string): Promise<any> {
     try {
-      // 1. Use OpenAI to enhance the search query
-      const enhancedQuery = await this.enhanceSearchQuery(query);
+      // 1. Use AI to directly get company information
+      const companies = await this.getCompaniesFromAI(query);
 
-      // 2. Perform web search using Google Custom Search API
-      const searchResults = await this.performWebSearch(enhancedQuery);
-
-      // 3. Extract company information from search results
-      const extractedCompanies = await this.extractCompanyInfo(searchResults);
-
-      // 4. Match with our database
-      const matchedCompanies = await this.matchWithDatabase(extractedCompanies);
+      // 2. Match with database using LinkedIn URLs
+      const enrichedCompanies = await this.matchWithDatabase(companies);
 
       return {
-        companies: matchedCompanies,
+        companies: enrichedCompanies,
         searchMetadata: {
           originalQuery: query,
-          enhancedQuery,
-          totalResults: matchedCompanies.length
+          totalResults: enrichedCompanies.length,
+          searchType: 'ai_direct_search'
         }
       };
     } catch (error) {
@@ -49,151 +52,125 @@ export class AdvancedSearchService {
     }
   }
 
-  private static async enhanceSearchQuery(query: string): Promise<string> {
+  private static async getCompaniesFromAI(query: string): Promise<CompanyData[]> {
     const prompt = `
-      Enhance the following search query to better find relevant companies and their information.
-      Original query: "${query}"
+      Given the following search query about companies, provide a list of relevant companies with their details.
+      Query: "${query}"
       
-      Consider:
-      - Adding relevant industry terms
-      - Including company size indicators
-      - Adding location context
-      - Including technology or product terms
-      
-      Return only the enhanced search query, nothing else.
+      For each company, provide the following information in JSON format:
+      {
+        "name": "Company name",
+        "linkedinUrl": "LinkedIn profile URL",
+        "website": "Company website",
+        "industry": "Primary industry",
+        "size": "Company size (must be one of: "1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+")",
+        "location": {
+          "country": "Country",
+          "region": "Region/State",
+          "city": "City"
+        },
+        "founded": "Year founded",
+        "description": "Brief company description",
+      }
+
+      Return an array of company objects. Focus on providing accurate LinkedIn URLs as they are crucial for matching.
+      Include only companies that are likely to have a LinkedIn presence.
+      Return the response as a JSON array, not an object with a companies property.
     `;
 
-    const completion = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
-      messages: [
-        {
-          role: "system",
-          content: "You are a search query enhancement assistant that helps improve search queries for finding company information."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
+    const { text } = await generateText({
+      model: openai('gpt-4-turbo-preview'),
+      system: 'You are a company information assistant that provides accurate company details with a focus on LinkedIn URLs for matching. Return only valid JSON array without any markdown formatting.',
+      prompt,
     });
 
-    return completion.choices[0].message.content || query;
-  }
-
-  private static async performWebSearch(query: string): Promise<any[]> {
     try {
-      const response = await axios.get('https://www.googleapis.com/customsearch/v1', {
-        params: {
-          key: this.GOOGLE_API_KEY,
-          cx: this.GOOGLE_SEARCH_ENGINE_ID,
-          q: query,
-          num: 10 // Number of results
-        }
-      });
-
-      return response.data.items || [];
+      // Clean the response text to ensure it's valid JSON
+      const cleanedText = text.trim().replace(/^```json\n?|\n?```$/g, '');
+      const response = JSON.parse(cleanedText);
+      const validatedResponse = CompanyArraySchema.parse(response);
+      return validatedResponse;
     } catch (error) {
-      console.error('Error performing web search:', error);
-      throw new Error('Failed to perform web search');
+      console.error('Error parsing AI response:', error);
+      console.error('Raw response:', text);
+      throw new Error('Failed to parse company data from AI response');
     }
   }
 
-  private static async extractCompanyInfo(searchResults: any[]): Promise<any[]> {
-    const companies = [];
+  private static async matchWithDatabase(companies: CompanyData[]): Promise<any[]> {
+    const enrichedCompanies = [];
 
-    for (const result of searchResults) {
-      const prompt = `
-        Extract company information from the following search result:
-        Title: ${result.title}
-        Snippet: ${result.snippet}
-        Link: ${result.link}
-        
-        Extract:
-        - Company name
-        - Industry
-        - Location
-        - Size (if mentioned)
-        - Technologies/products (if mentioned)
-        
-        Return the information in JSON format.
-      `;
-
+    for (const company of companies) {
       try {
-        const completion = await this.openai.chat.completions.create({
-          model: "gpt-4-turbo-preview",
-          messages: [
-            {
-              role: "system",
-              content: "You are a company information extraction assistant."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          response_format: { type: "json_object" }
+        // Try to find matching company in database using LinkedIn URL
+        const linkedinUrl = company.linkedinUrl;
+        if (!linkedinUrl) continue;
+
+        // Extract company identifier from LinkedIn URL
+        const linkedinIdentifier = this.extractLinkedInIdentifier(linkedinUrl);
+        if (!linkedinIdentifier) continue;
+
+        // Search in database using LinkedIn identifier
+        const dbCompany = await Company.findOne({
+          $or: [
+            { linkedinUrl: { $regex: linkedinIdentifier, $options: 'i' } },
+            { 'socialProfiles.linkedin': { $regex: linkedinIdentifier, $options: 'i' } }
+          ]
         });
 
-        const extractedInfo = JSON.parse(completion.choices[0].message.content || '{}');
-        companies.push(extractedInfo);
-      } catch (error) {
-        console.error('Error extracting company info:', error);
-        continue;
-      }
-    }
-
-    return companies;
-  }
-
-  private static async matchWithDatabase(extractedCompanies: any[]): Promise<any[]> {
-    const matchedCompanies = [];
-
-    for (const company of extractedCompanies) {
-      try {
-        // Try to find matching companies in our database
-        const matches = await Company.find({
-          $or: [
-            { name: { $regex: company.name, $options: 'i' } },
-            { domain: { $regex: company.domain, $options: 'i' } }
-          ]
-        }).lean();
-
-        if (matches.length > 0) {
-          // Enrich the database entry with additional information from web search
-          const enrichedCompany = {
-            ...matches[0],
-            webSearchData: {
-              ...company,
-              confidence: this.calculateMatchConfidence(matches[0], company)
+        if (dbCompany) {
+          // Enrich with database data
+          enrichedCompanies.push({
+            ...company,
+            _id: dbCompany._id,
+            isInDatabase: true,
+            databaseData: {
+              saved: dbCompany.isSaved,
+              lastUpdated: dbCompany.updatedAt,
+              additionalData: dbCompany
             }
-          };
-          matchedCompanies.push(enrichedCompany);
+          });
+        } else {
+          // Keep AI data as is
+          enrichedCompanies.push({
+            ...company,
+            isInDatabase: false
+          });
         }
       } catch (error) {
         console.error('Error matching company:', error);
-        continue;
+        // Include company even if matching fails
+        enrichedCompanies.push({
+          ...company,
+          isInDatabase: false,
+          matchError: 'Failed to match with database'
+        });
       }
     }
 
-    return matchedCompanies;
+    return enrichedCompanies;
   }
 
-  private static calculateMatchConfidence(dbCompany: any, webCompany: any): number {
-    // Implement a simple confidence scoring system
-    let score = 0;
-    
-    if (dbCompany.name.toLowerCase() === webCompany.name.toLowerCase()) {
-      score += 0.5;
+  private static extractLinkedInIdentifier(url: string): string | null {
+    try {
+      // Handle different LinkedIn URL formats
+      const patterns = [
+        /linkedin\.com\/company\/([^\/\?]+)/i,
+        /linkedin\.com\/organization\/([^\/\?]+)/i,
+        /linkedin\.com\/showcase\/([^\/\?]+)/i
+      ];
+
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+          return match[1].toLowerCase();
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error extracting LinkedIn identifier:', error);
+      return null;
     }
-    
-    if (dbCompany.industry === webCompany.industry) {
-      score += 0.3;
-    }
-    
-    if (dbCompany.country === webCompany.country) {
-      score += 0.2;
-    }
-    
-    return score;
   }
 } 

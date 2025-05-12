@@ -116,7 +116,7 @@ const AISearchBar: React.FC<AISearchBarProps> = ({ onSearch, searchCriteria, isL
           onChange={(e) => setQuery(e.target.value)}
           disabled={isLoading}
         />
-        <Tooltip title="Search companies">
+        <Tooltip title="Search with AI">
           <IconButton 
             type="submit" 
             sx={{ p: '10px' }} 
@@ -128,6 +128,9 @@ const AISearchBar: React.FC<AISearchBarProps> = ({ onSearch, searchCriteria, isL
         </Tooltip>
       </Paper>
       {renderCriteriaTags()}
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        AI-powered search finds companies from the web and matches them with our database
+      </Typography>
     </Box>
   );
 };
